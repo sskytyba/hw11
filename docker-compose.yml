@@ -1,0 +1,61 @@
+version: "3"
+
+networks:
+  app-tier:
+    driver: bridge
+
+services:
+  redis-inmemory:
+    container_name: redis-inmemory
+    image: redis:alpine
+    command: redis-server --port 6379 --appendonly no --save ""
+    networks:
+      - app-tier
+    ports:
+      - 7001:6379
+    volumes:
+      - ./data1:/data
+
+  redis-aof:
+    container_name: redis-aof
+    image: redis:alpine
+    command: redis-server --port 6379 --appendonly yes --save ""
+    networks:
+      - app-tier
+    ports:
+      - 7002:6379
+    volumes:
+      - ./data2:/data
+
+  redis-rdb:
+    container_name: redis-rdb
+    image: redis:alpine
+    command: redis-server --port 6379 --appendonly no --save 300 1 --save 100 10 --save 20 10000
+    networks:
+      - app-tier
+    ports:
+      - 7003:6379
+    volumes:
+      - ./data3:/data
+
+  beanstalkd-inmemory:
+    image: placeloop/beanstalkd
+    container_name: beanstalkd-inmemory
+    ports:
+      - 11301:11300
+    command: /usr/local/bin/beanstalkd -p 11300
+    networks:
+      - app-tier
+    volumes:
+      - ./data:/data
+
+  beanstalkd-fsync:
+    image: placeloop/beanstalkd
+    container_name: beanstalkd-fsync
+    ports:
+      - 11302:11300
+    command: /usr/local/bin/beanstalkd -p 11300 -b /binlog -f 1000
+    networks:
+      - app-tier
+    volumes:
+      - ./data:/binlog
